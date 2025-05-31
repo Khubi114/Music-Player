@@ -1,7 +1,7 @@
 require 'gosu'
 
-TOP_COLOR = Gosu::Color.new(0xFF57A0DC)
-BOTTOM_COLOR = Gosu::Color.new(0xFF0B3D91)
+TOP_COLOR = Gosu::Color.argb(0xFFFADADD) # Light pink
+BOTTOM_COLOR = Gosu::Color.argb(0xFFFFF0F5) # Lavender blush
 SCREEN_WIDTH = 900
 SCREEN_HEIGHT = 600
 
@@ -15,19 +15,13 @@ Y_TRACKS_START = 50
 
 ZOrder = { background: 0, albums: 1, tracks: 2, highlight: 3 }
 
-def safe_image_load(path)
-  Gosu::Image.new(path)
-rescue
-  Gosu::Image.new(Gosu::Image.new(1, 1)) # 1x1 transparent pixel
-end
-
 class Album
   attr_accessor :title, :artist, :artwork, :tracks
 
   def initialize(title, artist, artwork_file, tracks)
     @title = title
     @artist = artist
-    @artwork = safe_image_load(artwork_file)
+    @artwork = Gosu::Image.new(artwork_file)
     @tracks = tracks
   end
 end
@@ -47,8 +41,8 @@ class MusicPlayer < Gosu::Window
     self.caption = "Music Player"
 
     @albums = load_albums
-    @font_tracks = Gosu::Font.new(30)
-    @font_now_playing = Gosu::Font.new(25)
+    @font_tracks = Gosu::Font.new(28, name: Gosu.default_font_name)
+    @font_now_playing = Gosu::Font.new(24, name: Gosu.default_font_name)
 
     @selected_album_index = 0
     @playing_track_index = nil
@@ -57,20 +51,20 @@ class MusicPlayer < Gosu::Window
 
   def load_albums
     [
-      Album.new("Greatest Hits", "Neil Diamond", "albums/images.png", [
-        Track.new("Crackling Rose", "songs/arctic_1.mp3"),
-        Track.new("Soolaimon", "songs/arctic_2.mp3"),
-        Track.new("Sweet Caroline", "songs/arctic_3.mp3")
+      Album.new("AM", "Arctic Monkeys", "albums/arctic.jpg", [
+        Track.new("Do I Wanna Know?", "songs/arctic_1.mp3"),
+        Track.new("I Wanna Be Yours", "songs/arctic_2.mp3"),
+        Track.new("Why'd You Only Call Me When You're High?", "songs/arctic_3.mp3")
       ]),
-      Album.new("American Pie", "Don McClean", "albums/elvis.png", []),
-      Album.new("Greatest Hits", "Platters", "albums/ed.png", [
-        Track.new("Twilight Time", "songs/ed_1.mp3"),
-        Track.new("The Great Pretender", "songs/ed_1.mp3")
+      Album.new("30 #1 Hits", "ELvis Presley", "albums/elvis.jpg", []),
+      Album.new("No. 6", "Ed Sheeran", "albums/ed.png", [
+        Track.new("Beautiful People", "songs/ed_1.mp3"),
+        Track.new("I Don't Care", "songs/ed_1.mp3")
       ]),
-      Album.new("No Secrets", "Carly Simon", "albums/taylor.png", [
-        Track.new("The Carter Family", "songs/taylor_1.mp3"),
-        Track.new("Your So Vain", "songs/taylor_2.mp3"),
-        Track.new("Embrace Me You Child", "songs/taylor_2.mp3")
+      Album.new("Midnights", "Taylor Swift", "albums/taylor.jpg", [
+        Track.new("Midnight", "songs/taylor_1.mp3"),
+        Track.new("Snow On The Beach", "songs/taylor_2.mp3"),
+        Track.new("Lavendar Haze", "songs/taylor_2.mp3")
       ])
     ]
   end
@@ -101,7 +95,16 @@ class MusicPlayer < Gosu::Window
           album = @albums[index]
           x = X_ALBUMS_START + col * (ALBUM_SIZE + ALBUM_PADDING)
           y = Y_ALBUMS_START + row * (ALBUM_SIZE + ALBUM_PADDING)
-          # Prevent division by zero if image fails to load
+
+          # Draw background frame (lower Z-order)
+          Gosu.draw_rect(
+            x - 10, y - 10,
+            ALBUM_SIZE + 50, ALBUM_SIZE + 50,
+            Gosu::Color.argb(0xFFFFF4E1), # soft yellow
+            ZOrder[:background]
+          )
+
+          # Draw album artwork (higher Z-order)
           w = album.artwork.width.nonzero? || 1
           h = album.artwork.height.nonzero? || 1
           album.artwork.draw(
@@ -116,6 +119,7 @@ class MusicPlayer < Gosu::Window
     end
   end
 
+
   def draw_track_list
     album = @albums[@selected_album_index]
     return unless album
@@ -123,14 +127,15 @@ class MusicPlayer < Gosu::Window
     i = 0
     while i < album.tracks.length
       y = Y_TRACKS_START + i * 40
-      color = (i == @playing_track_index) ? Gosu::Color::RED : Gosu::Color::BLACK
+      color = (i == @playing_track_index) ? Gosu::Color.argb(0xFFDB7093) : Gosu::Color.argb(0xFF4B0082)
       @font_tracks.draw_text(album.tracks[i].name, X_TRACKS_START, y, ZOrder[:tracks], 1, 1, color)
       i += 1
     end
-
+    
     if @playing_track_index
       now_playing = album.tracks[@playing_track_index].name
-      @font_now_playing.draw_text("Now playing: #{now_playing}", X_TRACKS_START, Y_TRACKS_START - 40, ZOrder[:tracks], 1, 1, Gosu::Color::RED)
+      Gosu.draw_rect(X_TRACKS_START - 10, Y_TRACKS_START - 50, 400, 35, Gosu::Color.argb(0xFFFFE4E1), ZOrder[:highlight])
+     @font_now_playing.draw_text("Now playing: #{now_playing}", X_TRACKS_START, Y_TRACKS_START - 45, ZOrder[:tracks], 1, 1, Gosu::Color.argb(0xFFDB7093))
     end
   end
 
