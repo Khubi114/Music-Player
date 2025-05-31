@@ -1,4 +1,3 @@
-
 require 'gosu'
 
 TOP_COLOR = Gosu::Color.new(0xFF57A0DC)
@@ -16,13 +15,19 @@ Y_TRACKS_START = 50
 
 ZOrder = { background: 0, albums: 1, tracks: 2, highlight: 3 }
 
+def safe_image_load(path)
+  Gosu::Image.new(path)
+rescue
+  Gosu::Image.new(Gosu::Image.new(1, 1)) # 1x1 transparent pixel
+end
+
 class Album
   attr_accessor :title, :artist, :artwork, :tracks
 
   def initialize(title, artist, artwork_file, tracks)
     @title = title
     @artist = artist
-    @artwork = Gosu::Image.new(artwork_file)
+    @artwork = safe_image_load(artwork_file)
     @tracks = tracks
   end
 end
@@ -52,20 +57,20 @@ class MusicPlayer < Gosu::Window
 
   def load_albums
     [
-      Album.new("Greatest Hits", "Neil Diamond", "media/NeilDiamond.png", [
-        Track.new("Crackling Rose", "media/CracklingRose.mp3"),
-        Track.new("Soolaimon", "media/Soolaimon.mp3"),
-        Track.new("Sweet Caroline", "media/SweetCaroline.mp3")
+      Album.new("Greatest Hits", "Neil Diamond", "albums/images.png", [
+        Track.new("Crackling Rose", "songs/arctic_1.mp3"),
+        Track.new("Soolaimon", "songs/arctic_2.mp3"),
+        Track.new("Sweet Caroline", "songs/arctic_3.mp3")
       ]),
-      Album.new("American Pie", "Don McClean", "media/DonMcClean.png", []),
-      Album.new("Greatest Hits", "Platters", "media/ThePlatters.png", [
-        Track.new("Twilight Time", "media/TwilightTime.mp3"),
-        Track.new("The Great Pretender", "media/TheGreatPretender.mp3")
+      Album.new("American Pie", "Don McClean", "albums/elvis.png", []),
+      Album.new("Greatest Hits", "Platters", "albums/ed.png", [
+        Track.new("Twilight Time", "songs/ed_1.mp3"),
+        Track.new("The Great Pretender", "songs/ed_1.mp3")
       ]),
-      Album.new("No Secrets", "Carly Simon", "media/CarlySimon.png", [
-        Track.new("The Carter Family", "media/TheCarterFamily.mp3"),
-        Track.new("Your So Vain", "media/YourSoVain.mp3"),
-        Track.new("Embrace Me You Child", "media/EmbraceMeYouChild.mp3")
+      Album.new("No Secrets", "Carly Simon", "albums/taylor.png", [
+        Track.new("The Carter Family", "songs/taylor_1.mp3"),
+        Track.new("Your So Vain", "songs/taylor_2.mp3"),
+        Track.new("Embrace Me You Child", "songs/taylor_2.mp3")
       ])
     ]
   end
@@ -96,10 +101,13 @@ class MusicPlayer < Gosu::Window
           album = @albums[index]
           x = X_ALBUMS_START + col * (ALBUM_SIZE + ALBUM_PADDING)
           y = Y_ALBUMS_START + row * (ALBUM_SIZE + ALBUM_PADDING)
+          # Prevent division by zero if image fails to load
+          w = album.artwork.width.nonzero? || 1
+          h = album.artwork.height.nonzero? || 1
           album.artwork.draw(
             x, y, ZOrder[:albums],
-            ALBUM_SIZE.to_f / album.artwork.width,
-            ALBUM_SIZE.to_f / album.artwork.height
+            ALBUM_SIZE.to_f / w,
+            ALBUM_SIZE.to_f / h
           )
         end
         col += 1
@@ -158,6 +166,8 @@ class MusicPlayer < Gosu::Window
         y = Y_TRACKS_START + i * 40
         if my >= y && my <= y + 30 && mx >= X_TRACKS_START && mx <= X_TRACKS_START + 300
           @playing_track_index = i
+          # Stop previous track if playing
+          @current_track&.stop if @current_track.respond_to?(:stop)
           @current_track = album.tracks[i].audio_file.play
           return
         end
