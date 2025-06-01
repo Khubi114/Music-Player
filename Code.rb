@@ -73,6 +73,7 @@ class MusicPlayer < Gosu::Window
     draw_gradient_background
     draw_album_grid
     draw_track_list
+    draw_stop_button
   end
 
   def draw_gradient_background
@@ -119,7 +120,6 @@ class MusicPlayer < Gosu::Window
     end
   end
 
-
   def draw_track_list
     album = @albums[@selected_album_index]
     return unless album
@@ -135,14 +135,24 @@ class MusicPlayer < Gosu::Window
     if @playing_track_index
       now_playing = album.tracks[@playing_track_index].name
       Gosu.draw_rect(X_TRACKS_START - 10, Y_TRACKS_START - 50, 400, 35, Gosu::Color.argb(0xFFFFE4E1), ZOrder[:highlight])
-     @font_now_playing.draw_text("Now playing: #{now_playing}", X_TRACKS_START, Y_TRACKS_START - 45, ZOrder[:tracks], 1, 1, Gosu::Color.argb(0xFFDB7093))
+     @font_now_playing.draw_text("Now playing: #{now_playing}", X_TRACKS_START, Y_TRACKS_START - 85, 50, ZOrder[:tracks], 1, 1, Gosu::Color.argb(0xFFDB7093))
     end
   end
-
+ 
+  def draw_stop_button
+    Gosu.draw_rect(SCREEN_WIDTH - 110, 20, 90, 30, Gosu::Color::GRAY, ZOrder[:background])
+    @font_now_playing.draw_text("Stop", SCREEN_WIDTH - 100, 25, ZOrder[:tracks], 1, 1, Gosu::Color::WHITE)
+  end
+ 
   def button_down(id)
     if id == Gosu::MsLeft
       mx, my = mouse_x(), mouse_y()
-
+      if mouse_x >= SCREEN_WIDTH - 110 && mouse_x <= SCREEN_WIDTH - 20 &&
+        mouse_y >= 20 && mouse_y <= 50
+        @current_track&.stop
+        @playing_track_index = nil
+        return
+      end
       # Album selection
       row = 0
       while row < 2
@@ -169,14 +179,14 @@ class MusicPlayer < Gosu::Window
       i = 0
       while i < album.tracks.length
         y = Y_TRACKS_START + i * 40
-        if my >= y && my <= y + 30 && mx >= X_TRACKS_START && mx <= X_TRACKS_START + 300
-          @playing_track_index = i
-          # Stop previous track if playing
-          @current_track&.stop if @current_track.respond_to?(:stop)
+        if @playing_track_index == i && @current_track
+          @current_track.pause
+          @playing_track_index = nil
+          else
+          @current_track&.stop
           @current_track = album.tracks[i].audio_file.play
-          return
+          @playing_track_index = i
         end
-        i += 1
       end
     end
   end
