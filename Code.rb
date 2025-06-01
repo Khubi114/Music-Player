@@ -2,16 +2,16 @@ require 'gosu'
 
 TOP_COLOR = Gosu::Color.argb(0xFFFADADD) # Light pink
 BOTTOM_COLOR = Gosu::Color.argb(0xFFFFF0F5) # Lavender blush
-SCREEN_WIDTH = 900
-SCREEN_HEIGHT = 600
+SCREEN_WIDTH = 1000
+SCREEN_HEIGHT = 1000
 
-X_ALBUMS_START = 20
+X_ALBUMS_START = 50
 Y_ALBUMS_START = 20
 ALBUM_SIZE = 250
 ALBUM_PADDING = 20
 
-X_TRACKS_START = 560
-Y_TRACKS_START = 50
+X_TRACKS_START = 50
+Y_TRACKS_START = 625
 
 ZOrder = { background: 0, albums: 1, tracks: 2, highlight: 3 }
 
@@ -59,12 +59,12 @@ class MusicPlayer < Gosu::Window
       Album.new("30 #1 Hits", "ELvis Presley", "albums/elvis.jpg", []),
       Album.new("No. 6", "Ed Sheeran", "albums/ed.png", [
         Track.new("Beautiful People", "songs/ed_1.mp3"),
-        Track.new("I Don't Care", "songs/ed_1.mp3")
+        Track.new("I Don't Care", "songs/ed_2.mp3")
       ]),
       Album.new("Midnights", "Taylor Swift", "albums/taylor.jpg", [
         Track.new("Midnight", "songs/taylor_1.mp3"),
         Track.new("Snow On The Beach", "songs/taylor_2.mp3"),
-        Track.new("Lavendar Haze", "songs/taylor_2.mp3")
+        Track.new("Lavendar Haze", "songs/taylor_3.mp3")
       ])
     ]
   end
