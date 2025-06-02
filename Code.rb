@@ -140,8 +140,8 @@ class MusicPlayer < Gosu::Window
   end
  
   def draw_stop_button
-    Gosu.draw_rect(SCREEN_WIDTH - 110, 20, 90, 30, Gosu::Color::GRAY, ZOrder[:background])
-    @font_now_playing.draw_text("Stop", SCREEN_WIDTH - 100, 25, ZOrder[:tracks], 1, 1, Gosu::Color::WHITE)
+    Gosu.draw_rect(SCREEN_WIDTH - 110, 20, 90, 30, Gosu::Color.argb(0xFFD6DBDF), ZOrder[:background])
+    @font_now_playing.draw_text("Stop", SCREEN_WIDTH - 100, 25, ZOrder[:tracks], 1, 1, Gosu::Color::BLACK)
   end
  
   def button_down(id)
