@@ -1,8 +1,7 @@
-4
+8
 Arctic Monkeys
 AM
 2013
-2
 3
 Do I Wanna Know?
 songs/arctic_1.wav
@@ -13,10 +12,9 @@ songs/arctic_2.wav
 Why'd You Only Call Me When You're High?
 songs/arctic_3.wav
 3:04
-Ed Sheera
+Ed Sheeran
 No. 6
-1981
-1
+2019
 2
 Beautiful People
 songs/ed_1.wav
@@ -26,13 +24,14 @@ songs/ed_2.wav
 3:39
 ELvis Presley
 30 #1 Hits
-1971
-2
-0
+2002
+1
+Can't Help Falling in Love 
+songs/elvis_1.wav
+2:58
 Taylor Swift
 Midnights
 1972
-2
 3
 Midnight
 songs/taylor_1.wav
@@ -43,3 +42,40 @@ songs/taylor_2.wav
 Lavendar Haze
 songs/taylor_3.wav
 3:30
+Alec Benjamin
+Narrated For You
+2018
+2
+Let me down slowly
+songs/alec_1.wav
+2:49
+Water Fountain
+songs/alec_2.wav
+3:37
+Chase Atlantic
+Chase Atlantic
+2017
+2
+Into It 
+songs/chase_1.wav
+3:36
+Swim
+songs/chase_2.wav
+3:24
+Eminem
+The Eminem Show
+2002
+1
+Superman
+songs/em_1.wav
+5:50
+The Weekend
+Starboy
+2016
+2
+Starboy
+songs/weekend_1.wav
+3:50
+Stargirl Interlude
+songs/weekend_2.wav
+1:51
