@@ -1,0 +1,45 @@
+4
+Arctic Monkeys
+AM
+2013
+2
+3
+Do I Wanna Know?
+songs/arctic_1.wav
+4:32
+I Wanna Be Yours
+songs/arctic_2.wav
+2:42
+Why'd You Only Call Me When You're High?
+songs/arctic_3.wav
+3:04
+Ed Sheera
+No. 6
+1981
+1
+2
+Beautiful People
+songs/ed_1.wav
+3:17
+I Don't Care
+songs/ed_2.wav
+3:39
+ELvis Presley
+30 #1 Hits
+1971
+2
+0
+Taylor Swift
+Midnights
+1972
+2
+3
+Midnight
+songs/taylor_1.wav
+3:22
+Snow On The Beach
+songs/taylor_2.wav
+2:54
+Lavendar Haze
+songs/taylor_3.wav
+3:30
