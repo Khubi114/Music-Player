@@ -1,7 +1,8 @@
 require 'gosu'
 
-TOP_COLOR = Gosu::Color.argb(0xFFFADADD) # Light pink
-BOTTOM_COLOR = Gosu::Color.argb(0xFFFFF0F5) # Lavender blush
+# === Constants ===
+TOP_COLOR = Gosu::Color.argb(0xFF87CEEB) # Sky blue
+BOTTOM_COLOR = Gosu::Color.argb(0xFF4682B4) # Steel blue
 SCREEN_WIDTH = 1200
 SCREEN_HEIGHT = 800
 
@@ -19,10 +20,11 @@ ALBUMS_PER_PAGE = ALBUMS_PER_ROW * ALBUMS_PER_COL
 
 ZOrder = { background: 0, albums: 1, tracks: 2, highlight: 3 }
 
+# === Helpers ===
 def safe_image_load(path)
   Gosu::Image.new(path)
 rescue
-  Gosu::Image.new(1, 1) # 1x1 transparent pixel as placeholder
+  Gosu::Image.new(1, 1)
 end
 
 class Album
@@ -45,22 +47,25 @@ class Track
   end
 end
 
+# === Main Window ===
 class MusicPlayer < Gosu::Window
   def initialize
     super SCREEN_WIDTH, SCREEN_HEIGHT
     self.caption = "Music Player"
 
     @albums = load_albums
-    @font_tracks = Gosu::Font.new(28, name: Gosu.default_font_name)
-    @font_now_playing = Gosu::Font.new(24, name: Gosu.default_font_name)
-    @font_album = Gosu::Font.new(20, name: Gosu.default_font_name)
+    @font_tracks = Gosu::Font.new(28)
+    @font_now_playing = Gosu::Font.new(24)
+    @font_album = Gosu::Font.new(20)
 
     @selected_album_index = 0
     @playing_track_index = nil
     @current_track = nil
-    @paused = false
 
     @album_page = 0
+    @volume = 0.5
+    @loop = false
+    @shuffle = false
   end
 
   def load_albums
@@ -79,7 +84,7 @@ class MusicPlayer < Gosu::Window
         Track.new("I Don't Care", "songs/ed_2.wav")
       ]),
       Album.new("Midnights", "Taylor Swift", "albums/taylor.jpg", [
-        Track.new("Midnight", "songs/taylor_1.wav"),
+        Track.new("Midnight Rain", "songs/taylor_1.wav"),
         Track.new("Snow On The Beach", "songs/taylor_2.wav"),
         Track.new("Lavendar Haze", "songs/taylor_3.wav")
       ]),
@@ -102,12 +107,13 @@ class MusicPlayer < Gosu::Window
     ]
   end
 
-  def draw
+   def draw
     draw_gradient_background
     draw_album_grid
     draw_track_list
+    draw_stop_button
     draw_album_paging_buttons
-    draw_play_stop_buttons
+    draw_controls
   end
 
   def draw_gradient_background
@@ -134,17 +140,15 @@ class MusicPlayer < Gosu::Window
       Gosu.draw_rect(
         x - 25, y - 10,
         ALBUM_SIZE + 50, ALBUM_SIZE + 70,
-        Gosu::Color.argb(0xFFFFF4E1),
+        Gosu::Color.argb(0xFFB0E0E6),
         ZOrder[:background]
       )
 
       # Draw album artwork
-      w = album.artwork.width.nonzero? || 1
-      h = album.artwork.height.nonzero? || 1
       album.artwork.draw(
         x, y, ZOrder[:albums],
-        ALBUM_SIZE.to_f / w,
-        ALBUM_SIZE.to_f / h
+        ALBUM_SIZE.to_f / album.artwork.width,
+        ALBUM_SIZE.to_f / album.artwork.height
       )
 
       # Draw album title and artist
@@ -163,38 +167,22 @@ class MusicPlayer < Gosu::Window
     album = @albums[@selected_album_index]
     return unless album
 
-    i = 0
-    while i < album.tracks.length
+    album.tracks.each_with_index do |track, i|
       y = Y_TRACKS_START + i * 40
-      # Draw highlight for the selected track
-      if i == @playing_track_index
-        # Use a semi-transparent highlight so text is visible
-        Gosu.draw_rect(X_TRACKS_START - 10, y - 5, 400, 35, Gosu::Color.argb(0x66E1F6FF), ZOrder[:highlight])
-      end
-      color = (i == @playing_track_index) ? Gosu::Color.argb(0xFF4B0082) : Gosu::Color::BLACK
-      @font_tracks.draw_text(album.tracks[i].name, X_TRACKS_START, y, ZOrder[:tracks], 1, 1, color)
-      i += 1
+      color = (i == @playing_track_index) ? Gosu::Color.argb(0xFF1E90FF) : Gosu::Color.argb(0xFF00008B)
+      @font_tracks.draw_text(track.name, X_TRACKS_START, y, ZOrder[:tracks], 1, 1, color)
     end
 
     if @playing_track_index
       now_playing = album.tracks[@playing_track_index].name
-      @font_now_playing.draw_text("Now playing: #{now_playing}", X_TRACKS_START, Y_TRACKS_START - 40, ZOrder[:tracks], 1, 1, Gosu::Color.argb(0xFFDB7093))
+      Gosu.draw_rect(X_TRACKS_START - 10, Y_TRACKS_START - 50, 400, 35, Gosu::Color.argb(0xFFB0E0E6), ZOrder[:highlight])
+      @font_now_playing.draw_text("Now playing: #{now_playing}", X_TRACKS_START, Y_TRACKS_START - 85, ZOrder[:tracks], 1, 1, Gosu::Color.argb(0xFF1E90FF))
     end
   end
 
-  def draw_play_stop_buttons
-    y_offset = Y_ALBUMS_START + (ALBUMS_PER_COL * (ALBUM_SIZE + ALBUM_PADDING)) + 60
-    btn_y = y_offset
-    play_x = X_ALBUMS_START + 270
-    stop_x = X_ALBUMS_START + 320
-
-    # Play button (rectangle + text)
-    Gosu.draw_rect(play_x, btn_y, 50, 40, Gosu::Color.argb(0xFFD6DBDF), ZOrder[:background])
-    @font_now_playing.draw_text("Play", play_x + 5, btn_y + 8, ZOrder[:tracks], 1, 1, Gosu::Color::BLACK)
-
-    # Stop button (rectangle + text)
-    Gosu.draw_rect(stop_x, btn_y, 50, 40, Gosu::Color.argb(0xFFD6DBDF), ZOrder[:background])
-    @font_now_playing.draw_text("Stop", stop_x + 5, btn_y + 8, ZOrder[:tracks], 1, 1, Gosu::Color::BLACK)
+  def draw_stop_button
+    Gosu.draw_rect(SCREEN_WIDTH - 110, 20, 90, 30, Gosu::Color.argb(0xFFD6DBDF), ZOrder[:background])
+    @font_now_playing.draw_text("Stop", SCREEN_WIDTH - 100, 25, ZOrder[:tracks], 1, 1, Gosu::Color::BLACK)
   end
 
   def draw_album_paging_buttons
@@ -213,28 +201,51 @@ class MusicPlayer < Gosu::Window
     @font_now_playing.draw_text("Next", X_ALBUMS_START + 170, y_offset + 5, ZOrder[:albums], 1, 1, Gosu::Color::WHITE)
   end
 
+  def draw_controls
+    draw_button("Play", 600, 300)
+    draw_button("Pause", 600, 350)
+    draw_button("Loop", 600, 400)
+    draw_button("Shuffle", 600, 450)
+    draw_volume_bar 
+  end
+
+  def draw_button(text, x, y)
+    Gosu.draw_rect(x, y, 100, 40, Gosu::Color.argb(0xFFADD8E6))
+    @font_album.draw_text(text, x + 10, y + 10, ZOrder[:albums], 1, 1, Gosu::Color.argb(0xFF00008B))
+  end
+
+  def draw_volume_bar
+    Gosu.draw_rect(600, 500, 100, 20, Gosu::Color::GRAY)
+    Gosu.draw_rect(600, 500, @volume * 100, 20, Gosu::Color.argb(0xFF1E90FF))
+  end
+
+  def update
+    update_playing_track
+  end
+
+  def update_playing_track
+    if @playing_instance && !@playing_instance.playing?
+      if @loop
+        stop_track
+        @playing_instance = @playing_track.play(@volume)
+      elsif @shuffle
+        play_random_track
+      else
+        play_next_track
+      end
+    end
+  end
+
   def button_down(id)
     if id == Gosu::MsLeft
       mx, my = mouse_x(), mouse_y
       y_offset = Y_ALBUMS_START + (ALBUMS_PER_COL * (ALBUM_SIZE + ALBUM_PADDING)) + 60
-      play_x = X_ALBUMS_START + 270
-      stop_x = X_ALBUMS_START + 320
-
-      # Play button
-      if mx >= play_x && mx <= play_x + 50 && my >= y_offset && my <= y_offset + 40
-        if @playing_track_index && @albums[@selected_album_index].tracks[@playing_track_index]
-          @current_track&.stop
-          @current_track = @albums[@selected_album_index].tracks[@playing_track_index].audio_file.play
-          @paused = false
-        end
-        return
-      end
 
       # Stop button
-      if mx >= stop_x && mx <= stop_x + 50 && my >= y_offset && my <= y_offset + 40
+      if mx >= SCREEN_WIDTH - 110 && mx <= SCREEN_WIDTH - 20 &&
+         my >= 20 && my <= 50
         @current_track&.stop
         @playing_track_index = nil
-        @paused = false
         return
       end
 
@@ -276,6 +287,7 @@ class MusicPlayer < Gosu::Window
         end
       end
 
+      # Track selection
       album = @albums[@selected_album_index]
       i = 0
       while i < album.tracks.length
@@ -289,6 +301,62 @@ class MusicPlayer < Gosu::Window
         i += 1
       end
     end
+  end
+  def play_track
+    if @playing_track
+      stop_track
+      @playing_instance = @playing_track.play(@volume)
+    end
+  end
+
+  def pause_track
+    @playing_instance&.pause if @playing_instance && @playing_instance.respond_to?(:pause)
+  end
+
+  def stop_track
+    @playing_instance&.stop if @playing_instance && @playing_instance.respond_to?(:stop)
+    @playing_instance = nil
+  end
+
+  def play_next_track
+    return if !@playlist || @playlist.empty?
+    @playlist_index = (@playlist_index + 1) % @playlist.size
+    @playing_track = @playlist[@playlist_index]
+    stop_track
+    @playing_instance = @playing_track.play(@volume)
+  end
+
+  def play_previous_track
+    return if !@playlist || @playlist.empty?
+    @playlist_index = (@playlist_index - 1) % @playlist.size
+    @playing_track = @playlist[@playlist_index]
+    stop_track
+    @playing_instance = @playing_track.play(@volume)
+  end
+
+  def toggle_loop
+    @loop = !@loop
+  end
+
+  def toggle_shuffle
+    @shuffle = !@shuffle
+  end
+
+  def toggle_play_pause
+    if @playing_instance && @playing_instance.respond_to?(:paused?)
+      if @playing_instance.paused?
+        @playing_instance.resume
+      else
+        @playing_instance.pause
+      end
+    elsif @playing_track
+      play_track
+    end
+  end
+
+  def adjust_volume(x)
+    @volume = [[(x - 450) / 100.0, 0.0].max, 1.0].min
+    @playing_instance&.volume = @volume if @playing_instance && @playing_instance.respond_to?(:volume=)
   end
 end
 
