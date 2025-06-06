@@ -2,16 +2,16 @@ require 'gosu'
 
 TOP_COLOR = Gosu::Color.argb(0xFFFADADD) # Light pink
 BOTTOM_COLOR = Gosu::Color.argb(0xFFFFF0F5) # Lavender blush
-SCREEN_WIDTH = 1000
-SCREEN_HEIGHT = 1000
+SCREEN_WIDTH = 1200
+SCREEN_HEIGHT = 800
 
 X_ALBUMS_START = 50
 Y_ALBUMS_START = 20
-ALBUM_SIZE = 250
-ALBUM_PADDING = 20
+ALBUM_SIZE = 200
+ALBUM_PADDING = 80
 
-X_TRACKS_START = 50
-Y_TRACKS_START = 625
+X_TRACKS_START = 625
+Y_TRACKS_START = 50
 
 ALBUMS_PER_ROW = 2
 ALBUMS_PER_COL = 2
@@ -58,6 +58,7 @@ class MusicPlayer < Gosu::Window
     @selected_album_index = 0
     @playing_track_index = nil
     @current_track = nil
+    @paused = false
 
     @album_page = 0
   end
@@ -105,8 +106,8 @@ class MusicPlayer < Gosu::Window
     draw_gradient_background
     draw_album_grid
     draw_track_list
-    draw_stop_button
     draw_album_paging_buttons
+    draw_play_stop_buttons
   end
 
   def draw_gradient_background
@@ -131,8 +132,8 @@ class MusicPlayer < Gosu::Window
 
       # Draw background frame
       Gosu.draw_rect(
-        x - 10, y - 10,
-        ALBUM_SIZE + 50, ALBUM_SIZE + 50,
+        x - 25, y - 10,
+        ALBUM_SIZE + 50, ALBUM_SIZE + 70,
         Gosu::Color.argb(0xFFFFF4E1),
         ZOrder[:background]
       )
@@ -165,60 +166,90 @@ class MusicPlayer < Gosu::Window
     i = 0
     while i < album.tracks.length
       y = Y_TRACKS_START + i * 40
-      color = (i == @playing_track_index) ? Gosu::Color.argb(0xFFDB7093) : Gosu::Color.argb(0xFF4B0082)
+      # Draw highlight for the selected track
+      if i == @playing_track_index
+        # Use a semi-transparent highlight so text is visible
+        Gosu.draw_rect(X_TRACKS_START - 10, y - 5, 400, 35, Gosu::Color.argb(0x66E1F6FF), ZOrder[:highlight])
+      end
+      color = (i == @playing_track_index) ? Gosu::Color.argb(0xFF4B0082) : Gosu::Color::BLACK
       @font_tracks.draw_text(album.tracks[i].name, X_TRACKS_START, y, ZOrder[:tracks], 1, 1, color)
       i += 1
     end
 
     if @playing_track_index
       now_playing = album.tracks[@playing_track_index].name
-      Gosu.draw_rect(X_TRACKS_START - 10, Y_TRACKS_START - 50, 400, 35, Gosu::Color.argb(0xFFFFE4E1), ZOrder[:highlight])
-      @font_now_playing.draw_text("Now playing: #{now_playing}", X_TRACKS_START, Y_TRACKS_START - 85, ZOrder[:tracks], 1, 1, Gosu::Color.argb(0xFFDB7093))
+      @font_now_playing.draw_text("Now playing: #{now_playing}", X_TRACKS_START, Y_TRACKS_START - 40, ZOrder[:tracks], 1, 1, Gosu::Color.argb(0xFFDB7093))
     end
   end
 
-  def draw_stop_button
-    Gosu.draw_rect(SCREEN_WIDTH - 110, 20, 90, 30, Gosu::Color.argb(0xFFD6DBDF), ZOrder[:background])
-    @font_now_playing.draw_text("Stop", SCREEN_WIDTH - 100, 25, ZOrder[:tracks], 1, 1, Gosu::Color::BLACK)
+  def draw_play_stop_buttons
+    y_offset = Y_ALBUMS_START + (ALBUMS_PER_COL * (ALBUM_SIZE + ALBUM_PADDING)) + 60
+    btn_y = y_offset
+    play_x = X_ALBUMS_START + 270
+    stop_x = X_ALBUMS_START + 320
+
+    # Play button (rectangle + text)
+    Gosu.draw_rect(play_x, btn_y, 50, 40, Gosu::Color.argb(0xFFD6DBDF), ZOrder[:background])
+    @font_now_playing.draw_text("Play", play_x + 5, btn_y + 8, ZOrder[:tracks], 1, 1, Gosu::Color::BLACK)
+
+    # Stop button (rectangle + text)
+    Gosu.draw_rect(stop_x, btn_y, 50, 40, Gosu::Color.argb(0xFFD6DBDF), ZOrder[:background])
+    @font_now_playing.draw_text("Stop", stop_x + 5, btn_y + 8, ZOrder[:tracks], 1, 1, Gosu::Color::BLACK)
   end
 
   def draw_album_paging_buttons
-    # Previous
-    if @album_page > 0
-      Gosu.draw_rect(X_ALBUMS_START, Y_ALBUMS_START + (ALBUMS_PER_COL * (ALBUM_SIZE + ALBUM_PADDING)), 100, 40, Gosu::Color::GRAY, ZOrder[:background])
-      @font_now_playing.draw_text("Prev", X_ALBUMS_START + 20, Y_ALBUMS_START + (ALBUMS_PER_COL * (ALBUM_SIZE + ALBUM_PADDING)) + 5, ZOrder[:albums], 1, 1, Gosu::Color::WHITE)
-    end
-    # Next
-    if (@album_page + 1) * ALBUMS_PER_PAGE < @albums.size
-      Gosu.draw_rect(X_ALBUMS_START + 150, Y_ALBUMS_START + (ALBUMS_PER_COL * (ALBUM_SIZE + ALBUM_PADDING)), 100, 40, Gosu::Color::GRAY, ZOrder[:background])
-      @font_now_playing.draw_text("Next", X_ALBUMS_START + 170, Y_ALBUMS_START + (ALBUMS_PER_COL * (ALBUM_SIZE + ALBUM_PADDING)) + 5, ZOrder[:albums], 1, 1, Gosu::Color::WHITE)
-    end
+    y_offset = Y_ALBUMS_START + (ALBUMS_PER_COL * (ALBUM_SIZE + ALBUM_PADDING)) + 60
+
+    # Prev button
+    prev_enabled = @album_page > 0
+    prev_color = prev_enabled ? Gosu::Color::GRAY : Gosu::Color.argb(0xFFDDDDDD)
+    Gosu.draw_rect(X_ALBUMS_START, y_offset, 100, 40, prev_color, ZOrder[:background])
+    @font_now_playing.draw_text("Prev", X_ALBUMS_START + 20, y_offset + 5, ZOrder[:albums], 1, 1, Gosu::Color::WHITE)
+
+    # Next button
+    next_enabled = (@album_page + 1) * ALBUMS_PER_PAGE < @albums.size
+    next_color = next_enabled ? Gosu::Color::GRAY : Gosu::Color.argb(0xFFDDDDDD)
+    Gosu.draw_rect(X_ALBUMS_START + 150, y_offset, 100, 40, next_color, ZOrder[:background])
+    @font_now_playing.draw_text("Next", X_ALBUMS_START + 170, y_offset + 5, ZOrder[:albums], 1, 1, Gosu::Color::WHITE)
   end
 
   def button_down(id)
     if id == Gosu::MsLeft
-      mx, my = mouse_x(), mouse_y()
+      mx, my = mouse_x(), mouse_y
+      y_offset = Y_ALBUMS_START + (ALBUMS_PER_COL * (ALBUM_SIZE + ALBUM_PADDING)) + 60
+      play_x = X_ALBUMS_START + 270
+      stop_x = X_ALBUMS_START + 320
 
-      # Stop button
-      if mx >= SCREEN_WIDTH - 110 && mx <= SCREEN_WIDTH - 20 &&
-         my >= 20 && my <= 50
-        @current_track&.stop
-        @playing_track_index = nil
+      # Play button
+      if mx >= play_x && mx <= play_x + 50 && my >= y_offset && my <= y_offset + 40
+        if @playing_track_index && @albums[@selected_album_index].tracks[@playing_track_index]
+          @current_track&.stop
+          @current_track = @albums[@selected_album_index].tracks[@playing_track_index].audio_file.play
+          @paused = false
+        end
         return
       end
 
-      # Album paging buttons
+      # Stop button
+      if mx >= stop_x && mx <= stop_x + 50 && my >= y_offset && my <= y_offset + 40
+        @current_track&.stop
+        @playing_track_index = nil
+        @paused = false
+        return
+      end
+
+      # Prev button (only if enabled)
       if @album_page > 0 &&
          mx >= X_ALBUMS_START && mx <= X_ALBUMS_START + 100 &&
-         my >= Y_ALBUMS_START + (ALBUMS_PER_COL * (ALBUM_SIZE + ALBUM_PADDING)) &&
-         my <= Y_ALBUMS_START + (ALBUMS_PER_COL * (ALBUM_SIZE + ALBUM_PADDING)) + 40
+         my >= y_offset && my <= y_offset + 40
         @album_page -= 1
         return
       end
+
+      # Next button (only if enabled)
       if (@album_page + 1) * ALBUMS_PER_PAGE < @albums.size &&
          mx >= X_ALBUMS_START + 150 && mx <= X_ALBUMS_START + 250 &&
-         my >= Y_ALBUMS_START + (ALBUMS_PER_COL * (ALBUM_SIZE + ALBUM_PADDING)) &&
-         my <= Y_ALBUMS_START + (ALBUMS_PER_COL * (ALBUM_SIZE + ALBUM_PADDING)) + 40
+         my >= y_offset && my <= y_offset + 40
         @album_page += 1
         return
       end
@@ -232,6 +263,7 @@ class MusicPlayer < Gosu::Window
         x = X_ALBUMS_START + col * (ALBUM_SIZE + ALBUM_PADDING)
         y = Y_ALBUMS_START + row * (ALBUM_SIZE + ALBUM_PADDING)
         if mx >= x && mx <= x + ALBUM_SIZE && my >= y && my <= y + ALBUM_SIZE
+          @current_track&.stop           # Stop any currently playing track
           @selected_album_index = index
           @playing_track_index = nil
           @current_track = nil
@@ -244,7 +276,6 @@ class MusicPlayer < Gosu::Window
         end
       end
 
-      # Track selection
       album = @albums[@selected_album_index]
       i = 0
       while i < album.tracks.length
