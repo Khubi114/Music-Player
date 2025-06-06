@@ -170,17 +170,21 @@ class MusicPlayer < Gosu::Window
       @font_tracks.draw_text(track.name, X_TRACKS_START, y, ZOrder[:tracks], 1, 1, color)
     end
 
+    x = X_TRACKS_START - 5
+    y = Y_TRACKS_START - 50
+    color = Gosu::Color.argb(0xFF001382)
+
     if @playing_track_index
       now_playing = album.tracks[@playing_track_index].name
       text = "Now playing: #{now_playing}"
-      x = X_TRACKS_START - 5
-      y = Y_TRACKS_START - 50
-      color = Gosu::Color.argb(0xFF001382)
-      @font_now_playing.draw_text(text, x, y, ZOrder[:tracks], 1, 1, color)
-      text_width = @font_now_playing.text_width(text, 1)
-      # Draw underline
-      Gosu.draw_line(x, y + 26, color, x + text_width, y + 26, color, ZOrder[:tracks])
+    else
+      text = "Tracks"
     end
+
+    @font_now_playing.draw_text(text, x, y, ZOrder[:tracks], 1, 1, color)
+    text_width = @font_now_playing.text_width(text, 1)
+    # Draw underline
+    Gosu.draw_line(x, y + 26, color, x + text_width, y + 26, color, ZOrder[:tracks])
   end
 
   def draw_album_paging_buttons
@@ -197,6 +201,11 @@ class MusicPlayer < Gosu::Window
     next_color = next_enabled ? Gosu::Color.argb(0xFF4682B4) : Gosu::Color.argb(0xFFB0C4DE)
     Gosu.draw_rect(X_ALBUMS_START + 150, y_offset, 100, 40, next_color, ZOrder[:background])
     @font_now_playing.draw_text("Next", X_ALBUMS_START + 170, y_offset + 5, ZOrder[:albums], 1, 1, Gosu::Color::WHITE)
+
+    # --- Page number display ---
+    total_pages = (@albums.size.to_f / ALBUMS_PER_PAGE).ceil
+    page_text = "Page #{@album_page + 1} / #{total_pages}"
+    @font_now_playing.draw_text(page_text, X_ALBUMS_START + 50, y_offset + 50, ZOrder[:albums], 1, 1, Gosu::Color.argb(0xFF001382))
   end
 
   def draw_controls
