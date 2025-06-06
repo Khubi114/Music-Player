@@ -64,6 +64,10 @@ class MusicPlayer < Gosu::Window
     @volume = 0.5
     @loop = false
     @shuffle = false
+
+    @playlists = {} # name => [ [album_index, track_index], ... ]
+    @current_playlist = nil
+    @playlist_track_index = 0
   end
 
   def load_albums
@@ -109,6 +113,7 @@ class MusicPlayer < Gosu::Window
     draw_track_list
     draw_album_paging_buttons
     draw_controls
+    draw_playlists
   end
 
   def draw_gradient_background
@@ -156,18 +161,58 @@ class MusicPlayer < Gosu::Window
   end
 
   def draw_track_list
+    # If a playlist is selected, show its tracks
+    if @current_playlist && @playlists[@current_playlist] && !@playlists[@current_playlist].empty?
+      @playlists[@current_playlist].each_with_index do |(album_index, track_index), i|
+        album = @albums[album_index]
+        track = album.tracks[track_index]
+        y = Y_TRACKS_START + i * 40
+        text_width = @font_tracks.text_width("#{album.title} - #{track.name}") * 1
+        # Highlight if playing
+        if i == @playlist_track_index
+          Gosu.draw_rect(X_TRACKS_START - 10, y - 5, text_width + 20, 35, Gosu::Color.argb(0x66FFE4E1), ZOrder[:highlight])
+        end
+        color = (i == @playlist_track_index) ? Gosu::Color.argb(0xFF709DDB) : Gosu::Color.argb(0xFF001382)
+        @font_tracks.draw_text("#{album.title} - #{track.name}", X_TRACKS_START, y, ZOrder[:tracks], 1, 1, color)
+
+        # Draw heart button (optional, can be used to remove from favorites)
+        heart_x = X_TRACKS_START + text_width + 30
+        heart_y = y
+        @font_album.draw_text("♥", heart_x, heart_y, ZOrder[:tracks], 1.5, 1.5, Gosu::Color.argb(0xFFFF3366))
+      end
+
+      if @playlist_track_index && @playlists[@current_playlist][@playlist_track_index]
+        album_index, track_index = @playlists[@current_playlist][@playlist_track_index]
+        album = @albums[album_index]
+        track = album.tracks[track_index]
+        text = "Now playing: #{album.title} - #{track.name}"
+        x = X_TRACKS_START - 5
+        y = Y_TRACKS_START - 50
+        color = Gosu::Color.argb(0xFF001382)
+        @font_now_playing.draw_text(text, x, y, ZOrder[:tracks], 1, 1, color)
+        text_width = @font_now_playing.text_width(text)
+        Gosu.draw_line(x, y + 26, color, x + text_width, y + 26, color, ZOrder[:tracks])
+      end
+      return
+    end
+
+    # Otherwise, show tracks from the selected album
     return if @selected_album_index.nil? || @albums[@selected_album_index].nil?
     album = @albums[@selected_album_index]
 
     album.tracks.each_with_index do |track, i|
       y = Y_TRACKS_START + i * 40
-      text_width = @font_tracks.text_width(track.name, 1)
-      # Draw highlight for the selected track
+      text_width = @font_tracks.text_width(track.name)
       if i == @playing_track_index
         Gosu.draw_rect(X_TRACKS_START - 10, y - 5, text_width + 20, 35, Gosu::Color.argb(0x66FFE4E1), ZOrder[:highlight])
       end
       color = (i == @playing_track_index) ? Gosu::Color.argb(0xFF709DDB) : Gosu::Color.argb(0xFF001382)
       @font_tracks.draw_text(track.name, X_TRACKS_START, y, ZOrder[:tracks], 1, 1, color)
+
+      # Draw heart button
+      heart_x = X_TRACKS_START + text_width + 30
+      heart_y = y
+      @font_album.draw_text("♥", heart_x, heart_y, ZOrder[:tracks], 1.5, 1.5, Gosu::Color.argb(0xFFFF3366))
     end
 
     if @playing_track_index
@@ -177,8 +222,7 @@ class MusicPlayer < Gosu::Window
       y = Y_TRACKS_START - 50
       color = Gosu::Color.argb(0xFF001382)
       @font_now_playing.draw_text(text, x, y, ZOrder[:tracks], 1, 1, color)
-      text_width = @font_now_playing.text_width(text, 1)
-      # Draw underline
+      text_width = @font_now_playing.text_width(text)
       Gosu.draw_line(x, y + 26, color, x + text_width, y + 26, color, ZOrder[:tracks])
     end
   end
@@ -221,6 +265,16 @@ class MusicPlayer < Gosu::Window
   def draw_volume_bar
     Gosu.draw_rect(600, 500, 100, 20, Gosu::Color.argb(0xFF4682B4)) # steel blue
     Gosu.draw_rect(600, 500, @volume * 100, 20, Gosu::Color.argb(0xFF1E90FF)) # dodger blue
+  end
+
+  def draw_playlists
+    y = SCREEN_HEIGHT - 60
+    x = X_ALBUMS_START
+    @playlists.keys.each do |name|
+      color = (name == @current_playlist) ? Gosu::Color.argb(0xFF1E90FF) : Gosu::Color::WHITE
+      @font_album.draw_text("Playlist: #{name}", x, y, ZOrder[:albums], 1, 1, color)
+      x += @font_album.text_width("Playlist: #{name}") * 1 # or whatever scale you want
+    end
   end
 
   def button_down(id)
@@ -325,6 +379,33 @@ class MusicPlayer < Gosu::Window
         return
       end
     end
+
+    # Playlist selection (bottom)
+    if y > SCREEN_HEIGHT - 60
+      px = X_ALBUMS_START
+      @playlists.keys.each do |name|
+        width = @font_album.text_width("Playlist: #{name}", 1)
+        if x.between?(px, px + width)
+          select_playlist(name)
+          return
+        end
+        px += 200
+      end
+    end
+
+    # --- Heart button click (add to Favorites playlist) ---
+    album.tracks.each_with_index do |track, i|
+      y = Y_TRACKS_START + i * 40
+      text_width = @font_tracks.text_width(track.name, 1)
+      heart_x = X_TRACKS_START + text_width + 30
+      heart_y = y
+      heart_width = @font_album.text_width("♥") * 1.5
+      heart_height = 30
+      if x.between?(heart_x, heart_x + heart_width) && y.between?(heart_y, heart_y + heart_height)
+        add_track_to_playlist("Favorites", @selected_album_index, i)
+        return
+      end
+    end
   end
 
   def play_track
@@ -368,28 +449,70 @@ class MusicPlayer < Gosu::Window
   end
 
   def update
-    # If a track is playing, check if it has finished
-    if @current_track && !@current_track.playing?
-      album = @albums[@selected_album_index]
-      if @loop
-        # Replay the same track
-        @current_track = album.tracks[@playing_track_index].audio_file.play(@volume)
-      elsif @shuffle
-        # Pick a random track from the album (not the same one)
-        next_index = rand(album.tracks.size)
-        next_index = rand(album.tracks.size) while album.tracks.size > 1 && next_index == @playing_track_index
-        @playing_track_index = next_index
-        @current_track = album.tracks[@playing_track_index].audio_file.play(@volume)
-      else
-        # Play next track in album, or stop if at end
-        if @playing_track_index && @playing_track_index < album.tracks.size - 1
-          @playing_track_index += 1
+    if @current_playlist
+      if @current_track && !@current_track.playing?
+        play_next_in_playlist
+      end
+    else
+      # If a track is playing, check if it has finished
+      if @current_track && !@current_track.playing?
+        album = @albums[@selected_album_index]
+        if @loop
+          # Replay the same track
+          @current_track = album.tracks[@playing_track_index].audio_file.play(@volume)
+        elsif @shuffle
+          # Pick a random track from the album (not the same one)
+          next_index = rand(album.tracks.size)
+          next_index = rand(album.tracks.size) while album.tracks.size > 1 && next_index == @playing_track_index
+          @playing_track_index = next_index
           @current_track = album.tracks[@playing_track_index].audio_file.play(@volume)
         else
-          @current_track = nil
-          @playing_track_index = nil
+          # Play next track in album, or stop if at end
+          if @playing_track_index && @playing_track_index < album.tracks.size - 1
+            @playing_track_index += 1
+            @current_track = album.tracks[@playing_track_index].audio_file.play(@volume)
+          else
+            @current_track = nil
+            @playing_track_index = nil
+          end
         end
       end
+    end
+  end
+
+  def add_track_to_playlist(playlist_name, album_index, track_index)
+    @playlists[playlist_name] ||= []
+    @playlists[playlist_name] << [album_index, track_index]
+  end
+
+  def select_playlist(name)
+    return unless @playlists[name]
+    @current_playlist = name
+    @playlist_track_index = 0
+    play_playlist_track
+  end
+
+  def play_playlist_track
+    return unless @current_playlist && @playlists[@current_playlist] && !@playlists[@current_playlist].empty?
+    album_index, track_index = @playlists[@current_playlist][@playlist_track_index]
+    album = @albums[album_index]
+    return unless album && album.tracks[track_index]
+    track = album.tracks[track_index]
+    @current_track&.stop
+    @current_track = track.audio_file.play(@volume)
+  end
+
+  def play_next_in_playlist
+    return unless @current_playlist && @playlists[@current_playlist] && !@playlists[@current_playlist].empty?
+    album_index, track_index = @playlists[@current_playlist][@playlist_track_index]
+    album = @albums[album_index]
+    return unless album && album.tracks[track_index]
+    track = album.tracks[track_index]
+    @current_track&.stop
+    @current_track = track.audio_file.play(@volume)
+    @playlist_track_index += 1
+    if @playlist_track_index >= @playlists[@current_playlist].size
+      @playlist_track_index = 0 # Loop to start
     end
   end
 end
