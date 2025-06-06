@@ -11,8 +11,8 @@ Y_ALBUMS_START = 20
 ALBUM_SIZE = 200
 ALBUM_PADDING = 80
 
-X_TRACKS_START = 625
-Y_TRACKS_START = 50
+X_TRACKS_START = 620
+Y_TRACKS_START = 80
 
 ALBUMS_PER_ROW = 2
 ALBUMS_PER_COL = 2
@@ -52,11 +52,11 @@ class MusicPlayer < Gosu::Window
     self.caption = "Music Player"
 
     @albums = load_albums
-    @font_tracks = Gosu::Font.new(28)
-    @font_now_playing = Gosu::Font.new(24)
-    @font_album = Gosu::Font.new(20)
+    @font_tracks = Gosu::Font.new(26, name: "Courier")
+    @font_now_playing = Gosu::Font.new(22, name: "Courier")
+    @font_album = Gosu::Font.new(18, name: "Courier")
 
-    @selected_album_index = 0
+    @selected_album_index = nil      # No album selected at startup
     @playing_track_index = nil
     @current_track = nil
 
@@ -144,8 +144,8 @@ class MusicPlayer < Gosu::Window
         ALBUM_SIZE.to_f / album.artwork.height
       )
 
-      @font_album.draw_text(album.title, x, y + ALBUM_SIZE + 10, ZOrder[:albums], 1, 1, Gosu::Color::BLACK)
-      @font_album.draw_text(album.artist, x, y + ALBUM_SIZE + 35, ZOrder[:albums], 1, 1, Gosu::Color::GRAY)
+      @font_album.draw_text(album.title, x, y + ALBUM_SIZE + 10, ZOrder[:albums], 1, 1, Gosu::Color.argb(0xFF001382))
+      @font_album.draw_text(album.artist, x, y + ALBUM_SIZE + 35, ZOrder[:albums], 1, 1, Gosu::Color.argb(0xFF709DDB))
 
       col += 1
       if col >= ALBUMS_PER_ROW
@@ -156,24 +156,30 @@ class MusicPlayer < Gosu::Window
   end
 
   def draw_track_list
+    return if @selected_album_index.nil? || @albums[@selected_album_index].nil?
     album = @albums[@selected_album_index]
-    return unless album
 
-    i = 0
-    while i < album.tracks.length
+    album.tracks.each_with_index do |track, i|
       y = Y_TRACKS_START + i * 40
+      text_width = @font_tracks.text_width(track.name, 1)
       # Draw highlight for the selected track
       if i == @playing_track_index
-        Gosu.draw_rect(X_TRACKS_START - 10, y - 5, 400, 35, Gosu::Color.argb(0xFFE1F2FF), ZOrder[:highlight])
+        Gosu.draw_rect(X_TRACKS_START - 10, y - 5, text_width + 20, 35, Gosu::Color.argb(0x66FFE4E1), ZOrder[:highlight])
       end
       color = (i == @playing_track_index) ? Gosu::Color.argb(0xFF709DDB) : Gosu::Color.argb(0xFF001382)
-      @font_tracks.draw_text(album.tracks[i].name, X_TRACKS_START, y, ZOrder[:tracks], 1, 1, color)
-      i += 1
+      @font_tracks.draw_text(track.name, X_TRACKS_START, y, ZOrder[:tracks], 1, 1, color)
     end
 
     if @playing_track_index
       now_playing = album.tracks[@playing_track_index].name
-      @font_now_playing.draw_text("Now playing: #{now_playing}", X_TRACKS_START, Y_TRACKS_START - 40, ZOrder[:tracks], 1, 1, Gosu::Color.argb(0xFF709DDB))
+      text = "Now playing: #{now_playing}"
+      x = X_TRACKS_START - 5
+      y = Y_TRACKS_START - 50
+      color = Gosu::Color.argb(0xFF001382)
+      @font_now_playing.draw_text(text, x, y, ZOrder[:tracks], 1, 1, color)
+      text_width = @font_now_playing.text_width(text, 1)
+      # Draw underline
+      Gosu.draw_line(x, y + 26, color, x + text_width, y + 26, color, ZOrder[:tracks])
     end
   end
 
@@ -182,13 +188,13 @@ class MusicPlayer < Gosu::Window
 
     # Prev button
     prev_enabled = @album_page > 0
-    prev_color = prev_enabled ? Gosu::Color::GRAY : Gosu::Color.argb(0xFFDDDDDD)
+    prev_color = prev_enabled ? Gosu::Color.argb(0xFF4682B4) : Gosu::Color.argb(0xFFB0C4DE)
     Gosu.draw_rect(X_ALBUMS_START, y_offset, 100, 40, prev_color, ZOrder[:background])
     @font_now_playing.draw_text("Prev", X_ALBUMS_START + 20, y_offset + 5, ZOrder[:albums], 1, 1, Gosu::Color::WHITE)
 
     # Next button
     next_enabled = (@album_page + 1) * ALBUMS_PER_PAGE < @albums.size
-    next_color = next_enabled ? Gosu::Color::GRAY : Gosu::Color.argb(0xFFDDDDDD)
+    next_color = next_enabled ? Gosu::Color.argb(0xFF4682B4) : Gosu::Color.argb(0xFFB0C4DE)
     Gosu.draw_rect(X_ALBUMS_START + 150, y_offset, 100, 40, next_color, ZOrder[:background])
     @font_now_playing.draw_text("Next", X_ALBUMS_START + 170, y_offset + 5, ZOrder[:albums], 1, 1, Gosu::Color::WHITE)
   end
@@ -202,17 +208,19 @@ class MusicPlayer < Gosu::Window
   end
 
   def draw_button(text, x, y)
-    Gosu.draw_rect(x, y, 100, 40, Gosu::Color.argb(0xFFADD8E6))
-    @font_album.draw_text(text, x + 10, y + 10, ZOrder[:albums], 1, 1, Gosu::Color.argb(0xFF00008B))
+    color =
+      if (text == "Loop" && @loop) || (text == "Shuffle" && @shuffle)
+        Gosu::Color.argb(0xFF1E90FF) # bright blue for active
+      else
+        Gosu::Color.argb(0xFF87CEEB) # sky blue for normal
+      end
+    Gosu.draw_rect(x, y, 100, 40, color)
+    @font_album.draw_text(text, x + 10, y + 10, ZOrder[:albums], 1, 1, Gosu::Color.argb(0xFF154360))
   end
 
   def draw_volume_bar
-    Gosu.draw_rect(600, 500, 100, 20, Gosu::Color::GRAY)
-    Gosu.draw_rect(600, 500, @volume * 100, 20, Gosu::Color.argb(0xFF1E90FF))
-  end
-
-  def update
-    # No need for update_playing_track unless you want auto-next/loop/shuffle
+    Gosu.draw_rect(600, 500, 100, 20, Gosu::Color.argb(0xFF4682B4)) # steel blue
+    Gosu.draw_rect(600, 500, @volume * 100, 20, Gosu::Color.argb(0xFF1E90FF)) # dodger blue
   end
 
   def button_down(id)
@@ -264,6 +272,10 @@ class MusicPlayer < Gosu::Window
        x.between?(X_ALBUMS_START, X_ALBUMS_START + 100) &&
        y.between?(y_offset, y_offset + 40)
       @album_page -= 1
+      @selected_album_index = nil
+      @playing_track_index = nil
+      @current_track&.stop
+      @current_track = nil
       return
     end
 
@@ -272,6 +284,10 @@ class MusicPlayer < Gosu::Window
        x.between?(X_ALBUMS_START + 150, X_ALBUMS_START + 250) &&
        y.between?(y_offset, y_offset + 40)
       @album_page += 1
+      @selected_album_index = nil
+      @playing_track_index = nil
+      @current_track&.stop
+      @current_track = nil
       return
     end
 
@@ -298,6 +314,7 @@ class MusicPlayer < Gosu::Window
     end
 
     # --- Track selection ---
+    return if @selected_album_index.nil? || @albums[@selected_album_index].nil?
     album = @albums[@selected_album_index]
     album.tracks.each_with_index do |track, i|
       track_y = Y_TRACKS_START + i * 40
@@ -311,6 +328,7 @@ class MusicPlayer < Gosu::Window
   end
 
   def play_track
+    return if @selected_album_index.nil? || @albums[@selected_album_index].nil?
     album = @albums[@selected_album_index]
     if @playing_track_index
       @current_track&.stop
@@ -347,6 +365,32 @@ class MusicPlayer < Gosu::Window
   def adjust_volume(x)
     @volume = [[(x - 600) / 100.0, 0.0].max, 1.0].min
     @current_track&.volume = @volume
+  end
+
+  def update
+    # If a track is playing, check if it has finished
+    if @current_track && !@current_track.playing?
+      album = @albums[@selected_album_index]
+      if @loop
+        # Replay the same track
+        @current_track = album.tracks[@playing_track_index].audio_file.play(@volume)
+      elsif @shuffle
+        # Pick a random track from the album (not the same one)
+        next_index = rand(album.tracks.size)
+        next_index = rand(album.tracks.size) while album.tracks.size > 1 && next_index == @playing_track_index
+        @playing_track_index = next_index
+        @current_track = album.tracks[@playing_track_index].audio_file.play(@volume)
+      else
+        # Play next track in album, or stop if at end
+        if @playing_track_index && @playing_track_index < album.tracks.size - 1
+          @playing_track_index += 1
+          @current_track = album.tracks[@playing_track_index].audio_file.play(@volume)
+        else
+          @current_track = nil
+          @playing_track_index = nil
+        end
+      end
+    end
   end
 end
 
