@@ -52,8 +52,8 @@ class MusicPlayer < Gosu::Window
     self.caption = "Music Player"
 
     @albums = load_albums
-    @font_tracks = Gosu::Font.new(26, name: "Courier")
-    @font_now_playing = Gosu::Font.new(22, name: "Courier")
+    @font_tracks = Gosu::Font.new(22, name: "Courier")
+    @font_now_playing = Gosu::Font.new(20, name: "Courier")
     @font_album = Gosu::Font.new(18, name: "Courier")
 
     @selected_album_index = nil      # No album selected at startup
@@ -64,6 +64,10 @@ class MusicPlayer < Gosu::Window
     @volume = 0.5
     @loop = false
     @shuffle = false
+
+    @now_playing_scroll_offset = 0
+    @now_playing_scroll_direction = 1
+    @now_playing_scroll_last_time = Gosu.milliseconds
   end
 
   def load_albums
@@ -181,10 +185,41 @@ class MusicPlayer < Gosu::Window
       text = "Tracks"
     end
 
-    @font_now_playing.draw_text(text, x, y, ZOrder[:tracks], 1, 1, color)
+    max_width = 520
     text_width = @font_now_playing.text_width(text, 1)
-    # Draw underline
-    Gosu.draw_line(x, y + 26, color, x + text_width, y + 26, color, ZOrder[:tracks])
+
+    if text_width > max_width
+      now = Gosu.milliseconds
+      speed = 80 # pixels per second, adjust for your taste
+      elapsed = (now - (@now_playing_scroll_last_time || now)) / 1000.0
+      @now_playing_scroll_last_time = now
+
+      @now_playing_scroll_offset ||= 0
+
+      # Always reset scroll when track changes
+      if @last_now_playing_text != text
+        @now_playing_scroll_offset = 0
+        @last_now_playing_text = text
+      end
+
+      # Move left
+      @now_playing_scroll_offset += speed * elapsed
+
+      # If the text has fully scrolled out, reset to the right
+      if @now_playing_scroll_offset > (text_width + max_width)
+        @now_playing_scroll_offset = 0
+      end
+
+      Gosu.clip_to(x, y, max_width, 30) do
+        @font_now_playing.draw_text(text, x + max_width - @now_playing_scroll_offset, y, ZOrder[:tracks], 1, 1, color)
+      end
+      Gosu.draw_line(x, y + 26, color, x + max_width, y + 26, color, ZOrder[:tracks])
+    else
+      @now_playing_scroll_offset = 0
+      @last_now_playing_text = text
+      @font_now_playing.draw_text(text, x, y, ZOrder[:tracks], 1, 1, color)
+      Gosu.draw_line(x, y + 26, color, x + text_width, y + 26, color, ZOrder[:tracks])
+    end
   end
 
   def draw_album_paging_buttons
@@ -192,13 +227,13 @@ class MusicPlayer < Gosu::Window
 
     # Prev button
     prev_enabled = @album_page > 0
-    prev_color = prev_enabled ? Gosu::Color.argb(0xFF4682B4) : Gosu::Color.argb(0xFFB0C4DE)
+    prev_color = prev_enabled ? Gosu::Color.argb(0xFFB0C4DE) : Gosu::Color.argb(0xFF4682B4)
     Gosu.draw_rect(X_ALBUMS_START, y_offset, 100, 40, prev_color, ZOrder[:background])
     @font_now_playing.draw_text("Prev", X_ALBUMS_START + 20, y_offset + 5, ZOrder[:albums], 1, 1, Gosu::Color::WHITE)
 
     # Next button
     next_enabled = (@album_page + 1) * ALBUMS_PER_PAGE < @albums.size
-    next_color = next_enabled ? Gosu::Color.argb(0xFF4682B4) : Gosu::Color.argb(0xFFB0C4DE)
+    next_color = next_enabled ? Gosu::Color.argb(0xFFB0C4DE) : Gosu::Color.argb(0xFF4682B4)
     Gosu.draw_rect(X_ALBUMS_START + 150, y_offset, 100, 40, next_color, ZOrder[:background])
     @font_now_playing.draw_text("Next", X_ALBUMS_START + 170, y_offset + 5, ZOrder[:albums], 1, 1, Gosu::Color::WHITE)
 
@@ -209,10 +244,14 @@ class MusicPlayer < Gosu::Window
   end
 
   def draw_controls
-    draw_button("Play", 600, 300)
-    draw_button("Pause", 600, 350)
-    draw_button("Loop", 600, 400)
-    draw_button("Shuffle", 600, 450)
+    # Only show Play or Pause, not both
+    if @current_track && @current_track.playing?
+      draw_button("Pause", 600, 300)
+    else
+      draw_button("Play", 600, 300)
+    end
+    draw_button("Loop", 600, 350)
+    draw_button("Shuffle", 600, 400)
     draw_volume_bar 
   end
 
@@ -228,6 +267,8 @@ class MusicPlayer < Gosu::Window
   end
 
   def draw_volume_bar
+    # Draw "Volume:" label above the bar
+    @font_album.draw_text("Volume:", 600, 480, ZOrder[:albums], 1, 1, Gosu::Color.argb(0xFF001382))
     Gosu.draw_rect(600, 500, 100, 20, Gosu::Color.argb(0xFF4682B4)) # steel blue
     Gosu.draw_rect(600, 500, @volume * 100, 20, Gosu::Color.argb(0xFF1E90FF)) # dodger blue
   end
@@ -249,9 +290,13 @@ class MusicPlayer < Gosu::Window
       return
     end
 
-    # Play button (600, 300, 100x40)
+    # Play/Pause button (600, 300, 100x40)
     if x.between?(600, 700) && y.between?(300, 340)
-      play_track
+      if @current_track && @current_track.playing?
+        pause_track
+      else
+        play_track
+      end
       return
     end
 
