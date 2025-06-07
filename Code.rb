@@ -71,40 +71,37 @@ class MusicPlayer < Gosu::Window
   end
 
   def load_albums
-    [
-      Album.new("AM", "Arctic Monkeys", "albums/arctic.jpg", [
-        Track.new("Do I Wanna Know?", "songs/arctic_1.wav"),
-        Track.new("Why'd You Only Call Me When You're High?", "songs/arctic_2.wav"),
-        Track.new("I Wanna Be Yours", "songs/arctic_3.wav")
-      ]),
-      Album.new("30 #1 Hits", "Elvis Presley", "albums/elvis.jpg", [
-        Track.new("Can't Help Falling in Love", "songs/elvis_1.wav")
-      ]),
-      Album.new("No. 6", "Ed Sheeran", "albums/ed.png", [
-        Track.new("Beautiful People", "songs/ed_1.wav"),
-        Track.new("I Don't Care", "songs/ed_2.wav")
-      ]),
-      Album.new("Midnights", "Taylor Swift", "albums/taylor.jpg", [
-        Track.new("Midnight Rain", "songs/taylor_1.wav"),
-        Track.new("Snow On The Beach", "songs/taylor_2.wav"),
-        Track.new("Lavendar Haze", "songs/taylor_3.wav")
-      ]),
-      Album.new("Narrated For You", "Alec Benjamin", "albums/alec.jpg", [
-        Track.new("Let me down slowly", "songs/alec_1.wav"),
-        Track.new("Water Fountain", "songs/alec_2.wav")
-      ]),
-      Album.new("Chase Atlantic", "Chase Atlantic", "albums/chase.jpg", [
-        Track.new("Into It", "songs/chase_1.wav"),
-        Track.new("Swim", "songs/chase_2.wav")
-      ]),
-      Album.new("The Eminem Show", "Eminem", "albums/eminem.jpg", [
-        Track.new("Superman", "songs/em_1.wav")
-      ]),
-      Album.new("Starboy", "The Weekend", "albums/weekend.jpg", [
-        Track.new("Starboy", "songs/weekend_1.wav"),
-        Track.new("Stargirl Interlude", "songs/weekend_2.wav")
-      ])
-    ]
+    albums = []
+    current_album = nil
+    tracks = []
+
+    File.foreach("albums.txt") do |line|
+      line.strip!
+      next if line.empty?
+
+      if line.start_with?("Album:")
+        # Save previous album if any
+        if current_album
+          albums << Album.new(current_album[:title], current_album[:artist], current_album[:artwork], tracks)
+        end
+        current_album = { title: line.sub("Album:", "").strip }
+        tracks = []
+      elsif line.start_with?("Artist:")
+        current_album[:artist] = line.sub("Artist:", "").strip
+      elsif line.start_with?("Artwork:")
+        current_album[:artwork] = line.sub("Artwork:", "").strip
+      elsif line.start_with?("Track:")
+        name, file = line.sub("Track:", "").strip.split(",", 2)
+        tracks << Track.new(name.strip, file.strip)
+      end
+    end
+
+    # Add the last album
+    if current_album
+      albums << Album.new(current_album[:title], current_album[:artist], current_album[:artwork], tracks)
+    end
+
+    albums
   end
 
   def draw
@@ -300,20 +297,20 @@ class MusicPlayer < Gosu::Window
       return
     end
 
-    # Pause button (600, 350, 100x40)
-    if x.between?(600, 700) && y.between?(350, 390)
+    # Pause button (600, 300, 100x40)
+    if x.between?(600, 700) && y.between?(300, 340)
       pause_track
       return
     end
 
-    # Loop button (600, 400, 100x40)
-    if x.between?(600, 700) && y.between?(400, 440)
+    # Loop button (600, 350, 100x40)
+    if x.between?(600, 700) && y.between?(350, 390)
       toggle_loop
       return
     end
 
-    # Shuffle button (600, 450, 100x40)
-    if x.between?(600, 700) && y.between?(450, 490)
+    # Shuffle button (600, 400, 100x40)
+    if x.between?(600, 700) && y.between?(400, 440)
       toggle_shuffle
       return
     end
@@ -358,6 +355,8 @@ class MusicPlayer < Gosu::Window
         @selected_album_index = index
         @playing_track_index = nil
         @current_track = nil
+        album = @albums[index]
+        puts "\nAlbum selected: #{album.title} (#{album.artist})"
         return
       end
       col += 1
@@ -376,6 +375,7 @@ class MusicPlayer < Gosu::Window
         @current_track&.stop
         @current_track = track.audio_file.play(@volume)
         @playing_track_index = i
+        puts "\nCurrent Track: #{track.name} (#{album.title})"
         return
       end
     end
@@ -387,25 +387,38 @@ class MusicPlayer < Gosu::Window
     if @playing_track_index
       @current_track&.stop
       @current_track = album.tracks[@playing_track_index].audio_file.play(@volume)
+      track = album.tracks[@playing_track_index]
+      puts "\nCurrent Track: #{track.name} (#{album.title})"
     elsif album.tracks.any?
       @playing_track_index = 0
       @current_track&.stop
       @current_track = album.tracks[0].audio_file.play(@volume)
+      track = album.tracks[0]
+      puts "\nCurrent Track: #{track.name} (#{album.title})"
     end
   end
 
   def pause_track
     # Gosu::SampleInstance does not support true pause, so we stop playback
+    if @selected_album_index && @albums[@selected_album_index] && @playing_track_index
+      album = @albums[@selected_album_index]
+      track = album.tracks[@playing_track_index]
+      puts "\nTrack paused: #{track.name} (#{album.title})"
+    else
+      puts "\nTrack paused."
+    end
     @current_track&.stop
     @current_track = nil
   end
 
   def toggle_loop
     @loop = !@loop
+    puts @loop ? "\nLoop enabled" : "\nLoop disabled"
   end
 
   def toggle_shuffle
     @shuffle = !@shuffle
+    puts @shuffle ? "\nShuffle enabled" : "\nShuffle disabled"
   end
 
   def toggle_play_pause

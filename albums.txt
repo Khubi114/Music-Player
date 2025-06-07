@@ -1,81 +1,47 @@
-8
-Arctic Monkeys
-AM
-2013
-3
-Do I Wanna Know?
-songs/arctic_1.wav
-4:32
-I Wanna Be Yours
-songs/arctic_2.wav
-2:42
-Why'd You Only Call Me When You're High?
-songs/arctic_3.wav
-3:04
-Ed Sheeran
-No. 6
-2019
-2
-Beautiful People
-songs/ed_1.wav
-3:17
-I Don't Care
-songs/ed_2.wav
-3:39
-ELvis Presley
-30 #1 Hits
-2002
-1
-Can't Help Falling in Love 
-songs/elvis_1.wav
-2:58
-Taylor Swift
-Midnights
-1972
-3
-Midnight
-songs/taylor_1.wav
-3:22
-Snow On The Beach
-songs/taylor_2.wav
-2:54
-Lavendar Haze
-songs/taylor_3.wav
-3:30
-Alec Benjamin
-Narrated For You
-2018
-2
-Let me down slowly
-songs/alec_1.wav
-2:49
-Water Fountain
-songs/alec_2.wav
-3:37
-Chase Atlantic
-Chase Atlantic
-2017
-2
-Into It 
-songs/chase_1.wav
-3:36
-Swim
-songs/chase_2.wav
-3:24
-Eminem
-The Eminem Show
-2002
-1
-Superman
-songs/em_1.wav
-5:50
-The Weekend
-Starboy
-2016
-2
-Starboy
-songs/weekend_1.wav
-3:50
-Stargirl Interlude
-songs/weekend_2.wav
-1:51
+Album: AM
+Artist: Arctic Monkeys
+Artwork: albums/arctic.jpg
+Track: Do I Wanna Know?,songs/arctic_1.wav
+Track: Why'd You Only Call Me When You're High?,songs/arctic_2.wav
+Track: I Wanna Be Yours,songs/arctic_3.wav
+
+Album: No. 6
+Artist: Ed Sheeran
+Artwork: albums/ed.png
+Track: Beautiful People,songs/ed_1.wav
+Track: I Don't Care,songs/ed_2.wav
+
+Album: 30 #1 Hits
+Artist: Elvis Presley
+Artwork: albums/elvis.jpg
+Track: Can't Help Falling in Love,songs/elvis_1.wav
+
+Album: Midnights
+Artist: Taylor Swift
+Artwork: albums/taylor.jpg
+Track: Midnight,songs/taylor_1.wav
+Track: Snow On The Beach,songs/taylor_2.wav
+Track: Lavendar Haze,songs/taylor_3.wav
+
+Album: Narrated For You
+Artist: Alec Benjamin
+Artwork: albums/alec.jpg
+Track: Let me down slowly,songs/alec_1.wav
+Track: Water Fountain,songs/alec_2.wav
+
+Album: Chase Atlantic
+Artist: Chase Atlantic
+Artwork: albums/chase.jpg
+Track: Into It ,songs/chase_1.wav
+Track: Swim,songs/chase_2.wav
+
+Album: The Eminem Show
+Artist: Eminem
+Artwork: albums/eminem.jpg
+Track: Superman,songs/em_1.wav
+
+Album: Starboy
+Artist: The Weekend
+Artwork: albums/weekend.jpg
+Track: Starboy,songs/weekend_1.wav
+Track: Stargirl Interlude,songs/weekend_2.wav
